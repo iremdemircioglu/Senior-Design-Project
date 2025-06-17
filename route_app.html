@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Route Information for Guided Local Search</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="data_for_gls.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,7 +60,6 @@
 </head>
 <body>
   <img src="teknosalogo.png" alt="Teknosa Logo" class="logo">
-
   <h2>Route Information for Guided Local Search</h2>
 
   <label for="sheetSelect">Select Date:</label>
@@ -79,30 +80,15 @@
 
   <h3>Visited Addresses</h3>
   <ul id="addressList"></ul>
-
   <div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const data = {
-      "16 Jan": [
-        {"Date": "16 Jan", "Vehicle No": 1, "Order": 1, "Address": "Barış Mahallesi, Gebze, Kocaeli", "KM": 0.0, "Total KM": 0.0, "Desi": 0.0, "Lat": 40.7875568, "Lon": 29.4512612},
-        {"Date": "16 Jan", "Vehicle No": 1, "Order": 2, "Address": "EMİN SİNAN MAH, FATİH, İSTANBUL", "KM": 61.79, "Total KM": 61.79, "Desi": 405.0, "Lat": 41.0068163, "Lon": 28.9699665},
-        {"Date": "16 Jan", "Vehicle No": 1, "Order": 3, "Address": "HASEKİ SULTAN MAH, FATİH, İSTANBUL", "KM": 3.21, "Total KM": 65.0, "Desi": 103.0, "Lat": 41.009966, "Lon": 28.9404917}
-      ],
-      "20 Jan": [
-        {"Date": "20 Jan", "Vehicle No": 5, "Order": 8, "Address": "ADNAN KAHVECİ MAH, BEYLİKDÜZÜ, İSTANBUL", "KM": 14.37, "Total KM": 120.4, "Desi": 103.0, "Lat": 40.9988818, "Lon": 28.6293961},
-        {"Date": "20 Jan", "Vehicle No": 5, "Order": 9, "Address": "YEŞİLKÖY MAH, BAKIRKÖY, İSTANBUL", "KM": 22.1, "Total KM": 142.5, "Desi": 126.0, "Lat": 40.9776484, "Lon": 28.8188948}
-      ]
-    };
-
     const sheetSelect = document.getElementById("sheetSelect");
     const vehicleSelect = document.getElementById("vehicleSelect");
     const addressList = document.getElementById("addressList");
     const selectedRouteKm = document.getElementById("selectedRouteKm");
     const dayKm = document.getElementById("dayKm");
     const desiVolume = document.getElementById("desiVolume");
-    const mapDiv = document.getElementById("map");
 
     const map = L.map('map').setView([41.015, 28.979], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -136,7 +122,6 @@
       selectedRouteKm.textContent = '0';
       dayKm.textContent = '0';
       desiVolume.textContent = '0';
-      mapDiv.style.display = 'block';
       markers.forEach(m => map.removeLayer(m));
       markers = [];
       if (polyline) {
