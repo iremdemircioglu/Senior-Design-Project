@@ -6,7 +6,21 @@
   <title>Route Information for Guided Local Search</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="data_for_gls.js"></script>
+  <script>
+    let data;
+    async function loadDataAndInit() {
+      try {
+        const res = await fetch('data_for_gls.js');
+        const js = await res.text();
+        const script = document.createElement('script');
+        script.text = js;
+        document.head.appendChild(script);
+        init();
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      }
+    }
+  </script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -58,7 +72,7 @@
     }
   </style>
 </head>
-<body>
+<body onload="loadDataAndInit()">
   <img src="teknosalogo.png" alt="Teknosa Logo" class="logo">
   <h2>Route Information for Guided Local Search</h2>
 
@@ -94,6 +108,17 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     let markers = [];
     let polyline = null;
+
+    function init() {
+      if (!window.data) {
+        console.error('Data not found');
+        return;
+      }
+      data = window.data;
+      populateDateOptions();
+      sheetSelect.addEventListener("change", populateVehicleOptions);
+      vehicleSelect.addEventListener("change", renderRouteInfo);
+    }
 
     function populateDateOptions() {
       for (const date in data) {
@@ -169,10 +194,6 @@
         map.setView(latlngs[0], 11);
       }
     }
-
-    sheetSelect.addEventListener("change", populateVehicleOptions);
-    vehicleSelect.addEventListener("change", renderRouteInfo);
-    populateDateOptions();
   </script>
 </body>
 </html>
