@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Route Information for Guided Local Search</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    img.logo {
+      max-width: 200px;
+      display: block;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    select {
+      width: 200px;
+      padding: 5px;
+    }
+    .info-box {
+      margin-top: 15px;
+      background: #f0f5f8;
+      padding: 15px;
+      border-radius: 8px;
+      max-width: 400px;
+    }
+    .info-box p {
+      margin: 5px 0;
+      font-weight: bold;
+    }
+    #addressList {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+    #addressList li {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    #map {
+      height: 400px;
+      margin-top: 20px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <img src="teknosalogo.png" alt="Teknosa Logo" class="logo">
+
+  <h2>Route Information for Guided Local Search</h2>
+
+  <label for="sheetSelect">Select Date:</label>
+  <select id="sheetSelect">
+    <option>Select the date</option>
+  </select>
+
+  <label for="vehicleSelect">Select Vehicle:</label>
+  <select id="vehicleSelect">
+    <option>Select the vehicle</option>
+  </select>
+
+  <div class="info-box">
+    <p>Total KM of Selected Vehicle: <span id="selectedRouteKm">0</span></p>
+    <p>Total KM of the Day: <span id="dayKm">0</span></p>
+    <p>Total Volume (Desi): <span id="desiVolume">0</span></p>
+  </div>
+
+  <h3>Visited Addresses</h3>
+  <ul id="addressList"></ul>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const data = {
+      "16 Jan": [
+        {"Date": "16 Jan", "Vehicle No": 1, "Order": 1, "Address": "Barış Mahallesi, Gebze, Kocaeli", "KM": 0.0, "Total KM": 0.0, "Desi": 0.0, "Lat": 40.7875568, "Lon": 29.4512612},
+        {"Date": "16 Jan", "Vehicle No": 1, "Order": 2, "Address": "EMİN SİNAN MAH, FATİH, İSTANBUL", "KM": 61.79, "Total KM": 61.79, "Desi": 405.0, "Lat": 41.0068163, "Lon": 28.9699665},
+        {"Date": "16 Jan", "Vehicle No": 1, "Order": 3, "Address": "HASEKİ SULTAN MAH, FATİH, İSTANBUL", "KM": 3.21, "Total KM": 65.0, "Desi": 103.0, "Lat": 41.009966, "Lon": 28.9404917}
+      ],
+      "20 Jan": [
+        {"Date": "20 Jan", "Vehicle No": 5, "Order": 8, "Address": "ADNAN KAHVECİ MAH, BEYLİKDÜZÜ, İSTANBUL", "KM": 14.37, "Total KM": 120.4, "Desi": 103.0, "Lat": 40.9988818, "Lon": 28.6293961},
+        {"Date": "20 Jan", "Vehicle No": 5, "Order": 9, "Address": "YEŞİLKÖY MAH, BAKIRKÖY, İSTANBUL", "KM": 22.1, "Total KM": 142.5, "Desi": 126.0, "Lat": 40.9776484, "Lon": 28.8188948}
+      ]
+    };
+
+    const sheetSelect = document.getElementById("sheetSelect");
+    const vehicleSelect = document.getElementById("vehicleSelect");
+    const addressList = document.getElementById("addressList");
+    const selectedRouteKm = document.getElementById("selectedRouteKm");
+    const dayKm = document.getElementById("dayKm");
+    const desiVolume = document.getElementById("desiVolume");
+    const mapDiv = document.getElementById("map");
+
+    const map = L.map('map').setView([41.015, 28.979], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let markers = [];
+    let polyline = null;
+
+    function populateDateOptions() {
+      for (const date in data) {
+        const opt = document.createElement("option");
+        opt.value = date;
+        opt.textContent = date;
+        sheetSelect.appendChild(opt);
+      }
+    }
+
+    function populateVehicleOptions() {
+      vehicleSelect.innerHTML = '<option>Select the vehicle</option>';
+      const date = sheetSelect.value;
+      if (!data[date]) return;
+      const vehicles = [...new Set(data[date].map(d => d["Vehicle No"]))];
+      vehicles.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        vehicleSelect.appendChild(opt);
+      });
+    }
+
+    function renderRouteInfo() {
+      addressList.innerHTML = '';
+      selectedRouteKm.textContent = '0';
+      dayKm.textContent = '0';
+      desiVolume.textContent = '0';
+      mapDiv.style.display = 'block';
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      if (polyline) {
+        map.removeLayer(polyline);
+        polyline = null;
+      }
+
+      const date = sheetSelect.value;
+      const vehicle = vehicleSelect.value;
+      if (!data[date]) return;
+
+      const entries = data[date].filter(e => String(e["Vehicle No"]) === vehicle);
+      const allDayEntries = data[date];
+
+      let totalDesi = 0;
+      let vehicleTotalKm = 0;
+      let dayTotalKm = 0;
+      const latlngs = [];
+
+      entries.forEach((entry) => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.Order} - ${entry.Address}`;
+        addressList.appendChild(li);
+
+        totalDesi += entry.Desi;
+        latlngs.push([entry.Lat, entry.Lon]);
+
+        const marker = L.marker([entry.Lat, entry.Lon]).addTo(map);
+        marker.bindPopup(`<b>${entry.Order}</b> - ${entry.Address}`).openPopup();
+        marker.bindTooltip(`${entry.Order}`, { permanent: true, direction: 'top', className: 'leaflet-tooltip-own' }).openTooltip();
+        markers.push(marker);
+      });
+
+      vehicleTotalKm = entries.reduce((sum, entry) => sum + entry.KM, 0);
+      dayTotalKm = allDayEntries.reduce((sum, entry) => sum + entry.KM, 0);
+
+      selectedRouteKm.textContent = vehicleTotalKm.toFixed(2);
+      dayKm.textContent = dayTotalKm.toFixed(2);
+      desiVolume.textContent = totalDesi.toFixed(2);
+
+      if (latlngs.length > 1) {
+        polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+      }
+      if (latlngs.length > 0) {
+        map.setView(latlngs[0], 11);
+      }
+    }
+
+    sheetSelect.addEventListener("change", populateVehicleOptions);
+    vehicleSelect.addEventListener("change", renderRouteInfo);
+    populateDateOptions();
+  </script>
+</body>
+</html>
